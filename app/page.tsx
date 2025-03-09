@@ -6,7 +6,7 @@ import Image from 'next/image';
 
 import Question from "./components/Question";
 import { questions, literacyFeedback } from "./data";
-import { FaPiggyBank, FaMapMarkerAlt, FaMoneyBillWave, FaChartLine, FaUniversity, FaArrowRight, FaAward, FaMedal, FaTrophy, FaRegStar } from "react-icons/fa";
+import { FaPiggyBank, FaMapMarkerAlt, FaChartLine, FaUniversity, FaArrowRight, FaAward, FaMedal, FaTrophy, FaRegStar } from "react-icons/fa";
 import { MdTrendingUp } from "react-icons/md";
 import dynamic from 'next/dynamic';
 import { BsLightningCharge, BsBarChartLine, BsCurrencyDollar, BsBookmark } from 'react-icons/bs';
@@ -38,19 +38,19 @@ const GamePage: React.FC = () => {
     }
   };
 
-  const getIconForIndex = (index: number) => {
-    // Select icons based on index
-    switch (index % 4) {
-      case 0:
-        return <FaPiggyBank className="text-green-500 w-10 h-10" />;
-      case 1:
-        return <FaMoneyBillWave className="text-purple-500 w-10 h-10" />;
-      case 2:
-        return <FaChartLine className="text-orange-500 w-10 h-10" />;
-      default:
-        return <FaUniversity className="text-blue-500 w-10 h-10" />;
-    }
-  };
+  // const getIconForIndex = (index: number): JSX.Element => {
+  //   // Select icons based on index
+  //   switch (index % 4) {
+  //     case 0:
+  //       return <FaPiggyBank className="text-green-500 w-10 h-10" />;
+  //     case 1:
+  //       return <FaMoneyBillWave className="text-purple-500 w-10 h-10" />;
+  //     case 2:
+  //       return <FaChartLine className="text-orange-500 w-10 h-10" />;
+  //     default:
+  //       return <FaUniversity className="text-blue-500 w-10 h-10" />;
+  //   }
+  // };
 
   const handleAnswer = (isCorrect: boolean) => {
     if (isCorrect) setScore((prevScore) => prevScore + 1);
@@ -107,14 +107,14 @@ const GamePage: React.FC = () => {
         : literacyFeedback.high;
 
     setLiteracyLevel(literacyLevel);
-  }, [score, currentQuestion]);
+  }, [score, questions.length]);
 
-  const getCurrentPageSuggestions = () => {
+  const getCurrentPageSuggestions = (): string[] => {
     const startIndex = currentPage * suggestionsPerPage;
     return literacyLevel.suggestions.slice(startIndex, startIndex + suggestionsPerPage);
   };
 
-  const totalPages = Math.ceil(literacyLevel.suggestions.length / suggestionsPerPage);
+  const totalPages: number = Math.ceil(literacyLevel.suggestions.length / suggestionsPerPage);
 
   const pieChartData = {
     labels: ["Correct Answers", "Incorrect Answers"],
@@ -171,7 +171,7 @@ const GamePage: React.FC = () => {
       },
       tooltip: {
         callbacks: {
-          label: function(context: any) {
+          label: function(context: { parsed: { y: number } }): string {
             return `${context.parsed.y.toFixed(1)}%`;
           }
         }
@@ -212,11 +212,11 @@ const GamePage: React.FC = () => {
     labels: questions.map((_, idx) => `Q${idx + 1}`),
     datasets: [
       {
-        data: questionAnswers.map(correct => correct ? 1 : 0),
-        backgroundColor: questionAnswers.map(correct => 
+        data: questionAnswers.map((correct: boolean) => correct ? 1 : 0),
+        backgroundColor: questionAnswers.map((correct: boolean) => 
           correct ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)'
         ),
-        borderColor: questionAnswers.map(correct => 
+        borderColor: questionAnswers.map((correct: boolean) => 
           correct ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)'
         ),
         borderWidth: 1,
@@ -225,7 +225,7 @@ const GamePage: React.FC = () => {
     ]
   };
 
-  const getEmotionImage = (score: number, totalQuestions: number) => {
+  const getEmotionImage = (score: number, totalQuestions: number): string => {
     const percentage = (score / totalQuestions) * 100;
     if (percentage >= 75) {
       return "/emotions/excited.png";
@@ -238,7 +238,11 @@ const GamePage: React.FC = () => {
     }
   };
 
-  const getBadgeInfo = (score: number, totalQuestions: number) => {
+  const getBadgeInfo = (score: number, totalQuestions: number): {
+    icon: JSX.Element;
+    text: string;
+    color: string;
+  } => {
     const percentage = (score / totalQuestions) * 100;
     if (percentage >= 90) {
       return {
@@ -483,7 +487,7 @@ const GamePage: React.FC = () => {
             <div className="relative z-10 flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
               <div className="text-center sm:text-left">
                 <h2 className="text-2xl sm:text-3xl font-bold mb-2">Congratulations!</h2>
-                <p className="text-base sm:text-lg opacity-90">You've completed the assessment</p>
+                <p className="text-base sm:text-lg opacity-90">You&apos;ve completed the assessment</p>
                 <div className="mt-4 flex items-center justify-center sm:justify-start gap-2">
                   <FaMapMarkerAlt />
                   <span>{country}</span>
@@ -586,6 +590,42 @@ const GamePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Suggestions Section with Pagination */}
+          <div className="bg-white rounded-xl shadow-sm p-6 my-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Suggested Resources</h3>
+              <div className="flex space-x-2">
+                <button 
+                  onClick={previousPage} 
+                  disabled={currentPage === 0}
+                  className={`p-1 rounded ${currentPage === 0 ? 'text-gray-300' : 'text-blue-500 hover:bg-blue-50'}`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 011.414-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <span className="text-sm text-gray-600">Page {currentPage + 1} of {totalPages}</span>
+                <button 
+                  onClick={nextPage} 
+                  disabled={(currentPage + 1) * suggestionsPerPage >= literacyLevel.suggestions.length}
+                  className={`p-1 rounded ${(currentPage + 1) * suggestionsPerPage >= literacyLevel.suggestions.length ? 'text-gray-300' : 'text-blue-500 hover:bg-blue-50'}`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              {getCurrentPageSuggestions().map((suggestion, index) => (
+                <div key={index} className="p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <p className="text-gray-700">{suggestion}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Analytics Section */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="bg-white rounded-xl shadow-sm p-6">
@@ -617,6 +657,11 @@ const GamePage: React.FC = () => {
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Skill Radar</h3>
               <Radar data={radarChartData} options={radarChartOptions} />
+            </div>
+            {/* Adding Answer Breakdown Chart */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Answer Breakdown</h3>
+              <Bar data={answerBreakdownData} />
             </div>
           </div>
 
@@ -653,7 +698,11 @@ const GamePage: React.FC = () => {
 };
 
 // Helper component for feature cards - updated for mobile
-const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
+const FeatureCard = ({ icon, title, description }: { 
+  icon: React.ReactNode; 
+  title: string; 
+  description: string; 
+}): JSX.Element => (
   <div className="aspect-square flex flex-col items-center justify-center p-2 sm:p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all duration-300">
     <div className="text-blue-600 text-xl sm:text-2xl mb-1 sm:mb-2">{icon}</div>
     <h3 className="font-semibold text-gray-900 text-xs sm:text-sm text-center">{title}</h3>
