@@ -101,7 +101,7 @@ const GamePage: React.FC = () => {
         : literacyFeedback.high;
 
     setLiteracyLevel(literacyLevel);
-  }, [score, questions.length]);
+  }, [score]); // Removed questions.length as it's constant
 
   useEffect(() => {
     // Load historical scores from localStorage when component mounts
@@ -132,7 +132,7 @@ const GamePage: React.FC = () => {
       localStorage.setItem('financialLiteracyScores', JSON.stringify(updatedScores));
       setHistoricalScores(updatedScores);
     }
-  }, [isGameFinished]);
+  }, [isGameFinished, score, country]); // Added missing dependencies
 
   const getCurrentPageSuggestions = (): string[] => {
     const startIndex = currentPage * suggestionsPerPage;
@@ -270,8 +270,8 @@ const GamePage: React.FC = () => {
         beginAtZero: true,
         max: 100,
         ticks: {
-          callback: function(value: number) {
-            return value + '%';
+          callback: function(tickValue: string | number, index: number, ticks: any): string {
+            return tickValue + '%';
           }
         }
       }
@@ -279,7 +279,7 @@ const GamePage: React.FC = () => {
     plugins: {
       tooltip: {
         callbacks: {
-          label: function(context: any) {
+          label: function(context: { parsed: { y: number }, dataIndex: number }): string[] {
             const score = context.parsed.y;
             const result = historicalScores[context.dataIndex];
             return [
