@@ -270,7 +270,7 @@ const GamePage: React.FC = () => {
         beginAtZero: true,
         max: 100,
         ticks: {
-          callback: function(tickValue: string | number, index: number, ticks: any): string {
+          callback: function(tickValue: string | number): string {
             return tickValue + '%';
           }
         }
