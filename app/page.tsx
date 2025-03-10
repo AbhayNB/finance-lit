@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Pie, Bar, Radar } from "react-chartjs-2";
+import { Pie, Bar, Radar, Line } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, RadialLinearScale } from "chart.js"; // Chart.js components
 import Image from 'next/image';
 
@@ -17,6 +17,13 @@ const DownloadPDFButton = dynamic(() => import('./components/DownloadPDFButton')
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, RadialLinearScale);
 
+type GameResult = {
+  score: number;
+  totalQuestions: number;
+  date: string;
+  country: string;
+};
+
 const GamePage: React.FC = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
@@ -29,6 +36,7 @@ const GamePage: React.FC = () => {
   const suggestionsPerPage = 3;
   const [questionAnswers, setQuestionAnswers] = useState<boolean[]>([]);
   const [learningStreak] = useState(0);
+  const [historicalScores, setHistoricalScores] = useState<GameResult[]>([]);
 
   const startGame = () => {
     if (country.trim() !== "") {
@@ -37,20 +45,6 @@ const GamePage: React.FC = () => {
       alert("Please enter your country to start.");
     }
   };
-
-  // const getIconForIndex = (index: number): JSX.Element => {
-  //   // Select icons based on index
-  //   switch (index % 4) {
-  //     case 0:
-  //       return <FaPiggyBank className="text-green-500 w-10 h-10" />;
-  //     case 1:
-  //       return <FaMoneyBillWave className="text-purple-500 w-10 h-10" />;
-  //     case 2:
-  //       return <FaChartLine className="text-orange-500 w-10 h-10" />;
-  //     default:
-  //       return <FaUniversity className="text-blue-500 w-10 h-10" />;
-  //   }
-  // };
 
   const handleAnswer = (isCorrect: boolean) => {
     if (isCorrect) setScore((prevScore) => prevScore + 1);
@@ -108,6 +102,37 @@ const GamePage: React.FC = () => {
 
     setLiteracyLevel(literacyLevel);
   }, [score, questions.length]);
+
+  useEffect(() => {
+    // Load historical scores from localStorage when component mounts
+    const savedScores = localStorage.getItem('financialLiteracyScores');
+    if (savedScores) {
+      setHistoricalScores(JSON.parse(savedScores));
+    }
+  }, []);
+
+  useEffect(() => {
+    // Save score when game is finished
+    if (isGameFinished) {
+      const newScore: GameResult = {
+        score: score,
+        totalQuestions: questions.length,
+        date: new Date().toISOString(),
+        country: country
+      };
+      
+      const savedScores = localStorage.getItem('financialLiteracyScores');
+      let updatedScores: GameResult[] = [];
+      
+      if (savedScores) {
+        updatedScores = JSON.parse(savedScores);
+      }
+      
+      updatedScores.push(newScore);
+      localStorage.setItem('financialLiteracyScores', JSON.stringify(updatedScores));
+      setHistoricalScores(updatedScores);
+    }
+  }, [isGameFinished]);
 
   const getCurrentPageSuggestions = (): string[] => {
     const startIndex = currentPage * suggestionsPerPage;
@@ -223,6 +248,49 @@ const GamePage: React.FC = () => {
         label: 'Answers',
       }
     ]
+  };
+
+  const historicalScoresChartData = {
+    labels: historicalScores.map((result, index) => `Attempt ${index + 1}`),
+    datasets: [
+      {
+        label: 'Score History',
+        data: historicalScores.map(result => (result.score / result.totalQuestions) * 100),
+        fill: false,
+        borderColor: 'rgb(75, 192, 192)',
+        tension: 0.1,
+      }
+    ]
+  };
+
+  const historicalScoresOptions = {
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 100,
+        ticks: {
+          callback: function(value: number) {
+            return value + '%';
+          }
+        }
+      }
+    },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            const score = context.parsed.y;
+            const result = historicalScores[context.dataIndex];
+            return [
+              `Score: ${score.toFixed(1)}%`,
+              `Date: ${new Date(result.date).toLocaleDateString()}`,
+              `Country: ${result.country}`
+            ];
+          }
+        }
+      }
+    }
   };
 
   const getEmotionImage = (score: number, totalQuestions: number): string => {
@@ -663,6 +731,35 @@ const GamePage: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Answer Breakdown</h3>
               <Bar data={answerBreakdownData} />
             </div>
+            {/* Historical Scores Comparison */}
+            {historicalScores.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6 my-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Score History</h3>
+                <div className="relative h-[300px]">
+                  <Line data={historicalScoresChartData} options={historicalScoresOptions} />
+                </div>
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Previous Attempts:</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {historicalScores.slice(-3).reverse().map((result, index) => (
+                      <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">
+                            {new Date(result.date).toLocaleDateString()}
+                          </span>
+                          <span className="font-medium text-blue-600">
+                            {((result.score / result.totalQuestions) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Country: {result.country}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
